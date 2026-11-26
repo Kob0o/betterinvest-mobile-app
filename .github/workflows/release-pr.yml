@@ -1,0 +1,68 @@
+name: Release PR
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  release-pr:
+    name: ensure-release-pr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure or refresh develop → main release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main develop
+
+          COMMITS="$(git log --oneline origin/main..origin/develop || true)"
+          if [ -z "${COMMITS}" ]; then
+            COMMITS="_(aucun commit en avance sur main)_"
+          fi
+
+          BODY="$(cat <<EOF
+          ## Release: \`develop\` → \`main\`
+
+          PR de release automatique. **Ne pas auto-merger.** Fusionner avec un **merge commit** (pas squash / rebase), puis taguer \`vX.Y.Z\` sur \`main\`, conformément à \`CONTRIBUTING.md\`.
+
+          ### Commits depuis \`main\`
+
+          \`\`\`
+          ${COMMITS}
+          \`\`\`
+
+          ### Après merge
+
+          1. Merge commit de cette PR dans \`main\`
+          2. Tag \`vX.Y.Z\` sur \`main\` (réservé à Enzo et Yanis)
+          3. Vérifier que \`develop\` reste à jour
+
+          > **Note CI :** les PR créées avec \`GITHUB_TOKEN\` ne déclenchent pas les autres workflows. Si la CI n’a pas tourné, relancer manuellement les checks ou via **Actions → workflow_dispatch** / « Re-run jobs ».
+          EOF
+          )"
+
+          EXISTING="$(gh pr list --base main --head develop --state open --json number,url --jq '.[0].number // empty')"
+
+          if [ -n "${EXISTING}" ]; then
+            echo "Open release PR #${EXISTING} already exists — refreshing body."
+            gh pr edit "${EXISTING}" --body "${BODY}"
+          else
+            echo "Creating release PR develop → main."
+            gh pr create \
+              --base main \
+              --head develop \
+              --title "Release: develop → main" \
+              --body "${BODY}"
+          fi
