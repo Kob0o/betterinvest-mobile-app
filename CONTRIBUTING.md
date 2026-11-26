@@ -19,6 +19,18 @@ Les commits et le code sont en **anglais** (Conventional Commits). La documentat
 
 Les tags `vX.Y.Z` sont réservés à Enzo et Yanis.
 
+Après merge, la branche source est **supprimée automatiquement**.
+
+## Dependabot
+
+- Mises à jour **mensuelles** ciblant `develop` (npm + GitHub Actions), groupées par type.
+- Les PR **patch** et **minor** sont proposées en auto-merge (squash) lorsque la CI est verte.
+- Les mises à jour **major** restent en revue manuelle.
+
+## Release PR
+
+À chaque push sur `develop`, un workflow maintient une PR ouverte `develop` → `main` (`Release: develop → main`). Elle n’est **jamais** auto-mergée : fusionner manuellement en merge commit, puis taguer.
+
 ## Pull requests
 
 Une PR doit avoir :
